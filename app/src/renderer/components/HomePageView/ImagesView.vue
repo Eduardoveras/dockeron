@@ -5,6 +5,13 @@
       <span v-if="!loadingImages">Refresh</span>
       <span v-else>Loading...</span>
     </Button>
+    <Button class="container-operation-button" type="primary" icon="plus-round"
+        @click="imagePullModal = true">
+      Pull
+    </Button>
+    <Modal v-model="imagePullModal" title="Pull Image" @on-ok="pullImage" @on-cancel="repoTag = ''">
+      Image Name (and Tag): <Input v-model="repoTag"></Input>
+    </Modal>
     <br>
     <div v-if="hasFoundImages">
       <Card v-for="image in images" class="image-card">
@@ -19,6 +26,10 @@
         <Button type="primary" @click="inspectImage(image.Id)">
           Inspect
         </Button>
+        <image-control-panel class="control-panel" :image-id="image.Id"
+            @image-data-refreshed="function (newData) { loadImages() }"
+            @image-removed="function (removed) { loadImages() }">
+        </image-control-panel>
       </Card>
     </div>
     <div v-else>
@@ -29,15 +40,23 @@
 </template>
 
 <script>
+  import ImageControlPanel from './ImageControlPanel'
+
   import docker from '../../js/docker'
+  import notify from '../../js/notify'
 
   export default {
+    components: {
+      ImageControlPanel
+    },
     data () {
       return {
         images: [],
         hasFoundImages: false,
         error: '',
-        loadingImages: false
+        loadingImages: false,
+        imagePullModal: false,
+        repoTag: ''
       }
     },
     watch: {
@@ -53,14 +72,21 @@
       refreshImages () {
         this.loadingImages = true
         this.loadImages()
-        /* eslint-disable no-new */
-        new Notification('Dockeron', {
-          body: 'Image List Refreshed!'
-        })
+        notify('Image list refreshed!')
         this.loadingImages = false
       },
+      pullImage () {
+        var self = this
+        function imagePulled (info) {
+          notify('New image is pulled!')
+          self.refreshImages()
+        }
+
+        docker.pull(this.repoTag)
+          .then(imagePulled)
+          .catch(notify)
+      },
       inspectImage (imageId) {
-        console.log('Goto single-image-view: ', imageId)
         this.$router.push({
           name: 'single-image-view',
           params: { imageId: imageId }
@@ -74,20 +100,19 @@
         }
 
         function updateImages (images) {
-          console.log('listImages: ', images)
           self.images = images
           self.error = {}
         }
 
-        function updateError (err) {
-          console.log('listImages: ', err)
+        function updateErrored (err) {
           self.images = []
           self.error = err
+          notify(err)
         }
 
         docker.listImages(queries)
           .then(updateImages)
-          .catch(updateError)
+          .catch(updateErrored)
       },
       getImageName (repoTag) {
         return repoTag.slice(0, repoTag.indexOf(':'))
@@ -123,11 +148,11 @@
     margin: 5px 5px;
   }
 
-  .image-card-title {
-    height: 26px;
+  .control-panel {
+    display: inline-block;
   }
 
-  .refresh-button {
-    display: block;
+  .image-card-title {
+    height: 26px;
   }
 </style>

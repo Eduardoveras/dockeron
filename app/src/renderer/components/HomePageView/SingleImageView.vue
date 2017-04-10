@@ -1,18 +1,22 @@
 <template>
   <div>
-    <image-control-panel class="image-control-panel" :image-id="imageId"
-        @image-data-refreshed="refreshImageData">
+    <image-control-panel class="image-control-panel" :image-id="imageId" v-model="imageData"
+        @image-data-refreshed="refreshImageData" :initialize="true" :has-all-buttons="true">
     </image-control-panel>
-    <pre>{{imageData}}</pre>
+    <br>
+    <tree-view class="tree-view" :data="imageData" :options="{maxDepth: 1, rootObjectKey: imageId}">
+    </tree-view>
   </div>
 </template>
 
 <script>
   import ImageControlPanel from './ImageControlPanel'
+  import TreeView from './TreeView/TreeView'
 
   export default {
     components: {
-      ImageControlPanel
+      ImageControlPanel,
+      TreeView
     },
     data () {
       return {

@@ -1,6 +1,6 @@
 {
   "name": "dockeron",
-  "version": "0.0.6",
+  "version": "0.0.12",
   "description": "A dockeron project",
   "scripts": {
     "build": "npm run pack && build",
@@ -23,8 +23,8 @@
     "docker"
   ],
   "build": {
-    "productName": "ElectronVue",
-    "appId": "org.simulatedgreg.electron-vue",
+    "productName": "Dockeron",
+    "appId": "org.dockeron.dockeron",
     "category": "public.app-category.tools",
     "dmg": {
       "contents": [

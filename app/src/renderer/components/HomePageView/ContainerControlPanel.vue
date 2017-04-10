@@ -25,17 +25,20 @@
       <Button class="container-control-button" type="info" @click="getContainerLogs">
         Logs
       </Button>
+      <Modal v-model="logsModal" title="Logs">
+        <pre class="logs">{{logs}}</pre>
+      </Modal>
       <Button class="container-control-button" type="warning" @click="containerRenameModal = true">
         Rename
       </Button>
       <Modal v-model="containerRenameModal" title="Rename Container" @on-ok="renameContainer">
-          <Input v-model="containerNewName" placeholder="New Name"></Input>
+        <Input v-model="containerNewName" placeholder="New Name"></Input>
       </Modal>
       <Button class="container-control-button" type="success" @click="listTopProcesses">
         Top
       </Button>
       <Modal v-model="topProcessesModal" title="Top Processes">
-        <container-top-processes-form ref="containerTopProcessesForm" v-bind:topResult="topResult"></container-top-processes-form>
+        <tree-view :data="topResult" :options="{maxDepth: 1, rootObjectKey: 'Top'}"></tree-view>
       </Modal>
       <Button class="container-control-button" type="success" @click="getContainerStats">
         Stats
@@ -49,30 +52,31 @@
 </template>
 
 <script>
+  import TreeView from './TreeView/TreeView'
+
   import docker from '../../js/docker'
-  import ContainerTopProcessesForm from './ContainerTopProcessesForm'
+  import notify from '../../js/notify'
 
   export default {
     components: {
-      ContainerTopProcessesForm
+      TreeView
     },
     data () {
       return {
         topProcessesModal: false,
-        topResult: {},
         containerRenameModal: false,
+        logsModal: false,
+        logs: '',
+        topResult: {},
         containerNewName: '',
-        containerStatsModal: false,
-        containerStats: {}
+        container: {}
       }
     },
     props: {
-      containerId: String,
-      initialize: {
-        type: Boolean,
-        default: false
-      },
-      hasAllButtons: false
+      containerId: '',
+      initialize: false,
+      hasAllButtons: false,
+      value: {}
     },
     methods: {
       simpleStringify (object) {
@@ -93,175 +97,144 @@
       },
       startContainer () {
         var self = this
-        console.log('Start: ', self.containerId)
-        var container = docker.getContainer(self.containerId)
 
-        container.start()
-          .then(function (data) {
-            console.log('Started!')
-            self.inspectContainer()
-          })
-          .catch(console.warn)
+        function containerStarted (data) {
+          notify('Container ' + self.value.Name + ' started!')
+          self.inspectContainer()
+        }
+
+        this.container.start()
+          .then(containerStarted)
+          .catch(notify)
       },
       stopContainer () {
         var self = this
-        console.log('Stop: ', self.containerId)
-        var container = docker.getContainer(self.containerId)
 
-        container.stop()
-          .then(function (data) {
-            console.log('Stopped!')
-            self.inspectContainer()
-          })
-          .catch(console.warn)
+        function containerStopped (data) {
+          notify('Container ' + self.value.Name + ' stopped!')
+          self.inspectContainer()
+        }
+
+        this.container.stop()
+          .then(containerStopped)
+          .catch(notify)
       },
       pauseContainer () {
         var self = this
-        console.log('Pause: ', self.containerId)
-        var container = docker.getContainer(self.containerId)
 
-        container.pause()
-          .then(function (data) {
-            console.log('Paused!')
-            self.inspectContainer()
-          })
-          .catch(console.warn)
+        function containerPaused (data) {
+          notify('Container ' + self.value.Name + ' paused!')
+          self.inspectContainer()
+        }
+
+        this.container.pause()
+          .then(containerPaused)
+          .catch(notify)
       },
       unpauseContainer () {
         var self = this
-        console.log('Unpause: ', self.containerId)
-        var container = docker.getContainer(self.containerId)
-        console.log(container)
 
-        container.unpause()
-          .then(function (data) {
-            console.log('Unpaused!')
-            self.inspectContainer()
-          })
-          .catch(console.warn)
+        function containerUnpaused (data) {
+          notify('Container ' + self.value.Name + ' unpaused!')
+          self.inspectContainer()
+        }
+
+        this.container.unpause()
+          .then(containerUnpaused)
+          .catch(notify)
       },
       restartContainer () {
         var self = this
-        console.log('Restart: ', self.containerId)
-        var container = docker.getContainer(self.containerId)
 
-        container.restart()
-          .then(function (data) {
-            console.log('Restarted!')
-            self.inspectContainer()
-          })
-          .catch(console.warn)
+        function containerRestarted (data) {
+          notify('Container ' + self.value.Name + ' restarted!')
+          self.inspectContainer()
+        }
+
+        this.container.restart()
+          .then(containerRestarted)
+          .catch(notify)
       },
       killContainer () {
         var self = this
-        console.log('Kill: ', self.containerId)
-        var container = docker.getContainer(self.containerId)
 
-        container.kill()
-          .then(function (data) {
-            console.log('Killed!')
-            self.inspectContainer()
-          })
-          .catch(console.warn)
+        function containerKilled (data) {
+          notify('Container ' + self.value.Name + ' killed!')
+          self.inspectContainer()
+        }
+
+        this.container.kill()
+          .then(containerKilled)
+          .catch(notify)
       },
       inspectContainer () {
         var self = this
-        var container = docker.getContainer(self.containerId)
 
         function containerRefreshed (data) {
-          console.log('inspect: ', data)
           self.$emit('container-data-refreshed', data)
         }
 
-        function containerErrored (err) {
-          console.log('inspect: ', err)
+        function refreshErrored (err) {
           self.$emit('container-data-errored', err)
         }
 
-        container.inspect()
+        this.container.inspect()
           .then(containerRefreshed)
-          .catch(containerErrored)
+          .catch(refreshErrored)
       },
       getContainerLogs () {
         var self = this
-        console.log('get logs from container: ', self.containerId)
-        var container = docker.getContainer(self.containerId)
         var logOpts = {
           stdout: true,
           stderr: true,
           tail: 10
-        }        
-        container.logs(logOpts)
-          .then(function (data) {
-            console.log('Display logs:')
-            console.log(data)
-            // console.log(JSON.stringify(JSON.decycle(data)))
-            console.log(data.statusCode)
-            console.log(data.statusMessage)
+        }
+
+        function containerLogsGot (data) {
+          data.setEncoding('utf8')
+
+          data.on('data', function (logs) {
+            self.logsModal = true
+            self.logs = logs
           })
-          .catch(console.warn)
+        }
+
+        this.container.logs(logOpts)
+          .then(containerLogsGot)
+          .catch(notify)
       },
       renameContainer () {
         if (this.containerNewName === '') return
         var self = this
-        var renamePara = {
+        var renameParams = {
           name: self.containerNewName
         }
-        var container = docker.getContainer(self.containerId)
 
-        function renameContainerFinshed (data) {
-          console.log('Rename: ' + self.containerId + ' to ' + renamePara.name)
-          /* eslint-disable no-new */
-          new Notification('Dockeron', {
-            body: 'Rename container to ' + renamePara.name + ' successful!'
-          })
+        function containerRenamed (data) {
+          notify('Rename container to ' + renameParams.name + ' successful!')
           self.containerNewName = ''
           self.inspectContainer()
         }
 
-        function renameContainerFailed (error) {
-          console.log(error)
-          var errorMsg = error.message
-          errorMsg = errorMsg.slice(errorMsg.indexOf(':') + 2)
-          self.containerNewName = ''
-          /* eslint-disable no-new */
-          new Notification('Dockeron', {
-            body: errorMsg
-          })
-        }
-
-        container.rename(renamePara)
-          .then(renameContainerFinshed)
-          .catch(renameContainerFailed)
+        this.container.rename(renameParams)
+          .then(containerRenamed)
+          .catch(notify)
       },
       listTopProcesses () {
         var self = this
-        console.log('List top processes of: ' + self.containerId)
-        var container = docker.getContainer(self.containerId)
 
-        container.top()
-          .then(function (data) {
-            console.log(data)
-            self.topResult = data
-            self.topProcessesModal = true
-          })
-          .catch(console.warn)
-      },
-      getContainerStats () {
-        var self = this
-        console.log('Get stats of container: ' + self.containerId)
-        var container = docker.getContainer(self.containerId)
+        function topProcessesGot (data) {
+          self.topResult = data
+          self.topProcessesModal = true
+        }
 
-        container.stats()
-          .then(function (data) {
-            self.containerStats = self.simpleStringify(data)
-            self.containerStatsModal = true
-            console.log(self.containerStats)
-          })
-          .catch(console.warn)
+        this.container.top()
+          .then(topProcessesGot)
+          .catch(notify)
       }
     },
     created () {
+      this.container = docker.getContainer(this.containerId)
       if (this.initialize) {
         this.inspectContainer()
       }
@@ -272,5 +245,9 @@
 <style scoped>
   .additional-buttons {
     display: inline-block;
+  }
+
+  .logs {
+    white-space: pre-wrap;
   }
 </style>

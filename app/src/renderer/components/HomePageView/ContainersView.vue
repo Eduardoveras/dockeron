@@ -1,17 +1,18 @@
 <template>
   <div>
-    <Button class="container-operation-button" type="primary" icon="refresh"
-        :loading="loadingContainers" @click="refreshContainers">
+    <Button type="primary" icon="refresh" :loading="loadingContainers"
+        @click="refreshContainers">
       <span v-if="!loadingContainers">Refresh</span>
       <span v-else>Loading...</span>
     </Button>
-    <Button class="container-operation-button" type="primary" icon="plus-round"
-        @click="containerCreateModal = true">
+    <Button type="primary" icon="plus-round" @click="containerCreateModal = true">
       Create
     </Button>
     <Modal v-model="containerCreateModal" title="Create Container"
         @on-ok="confirmCreation" @on-cancel="resetCreation">
-      <container-creation-form ref="containerCreationForm"></container-creation-form>
+      <container-creation-form ref="containerCreationForm"
+          @new-container-created="function (newContainer) { loadContainers() }">
+      </container-creation-form>
     </Modal>
     <br>
     <div v-if="hasFoundContainers">
@@ -44,6 +45,7 @@
   import ContainerCreationForm from './ContainerCreationForm'
 
   import docker from '../../js/docker'
+  import notify from '../../js/notify'
 
   export default {
     components: {
@@ -86,14 +88,10 @@
       refreshContainers () {
         this.loadingContainers = true
         this.loadContainers()
-        /* eslint-disable no-new */
-        new Notification('Dockeron', {
-          body: 'Container List Refreshed!'
-        })
+        notify('Container list refreshed!')
         this.loadingContainers = false
       },
       inspectContainer (containerId) {
-        console.log('Goto single-container-view: ', containerId)
         this.$router.push({
           name: 'single-container-view',
           params: { containerId: containerId }
@@ -108,20 +106,19 @@
         }
 
         function updateContainers (containers) {
-          console.log('listContainers: ', containers)
           self.containers = containers
           self.error = {}
         }
 
-        function updateError (err) {
-          console.log('listContainers: ', err)
+        function updateErrored (err) {
           self.containers = []
           self.error = err
+          notify(err)
         }
 
         docker.listContainers(queries)
           .then(updateContainers)
-          .catch(updateError)
+          .catch(updateErrored)
       }
     },
     created () {

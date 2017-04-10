@@ -1,70 +1,107 @@
 <template>
   <div>
-    <Form :model="newContainer" :label-width="80">
+    <Form :model="defaultSettings" :label-width="80">
       <Form-item label="Image" required>
-        <Input v-model="newContainer.image" placeholder="Image Name"></Input>
+        <Input v-model="defaultSettings.Image" placeholder="Image Name"></Input>
       </Form-item>
       <Form-item label="Name">
-        <Input v-model="newContainer.name" placeholder="New name of your container"></Input>
-      </Form-item>
-      <Form-item label="Cmd">
-        <Input v-model="newContainer.Cmd" placeholder="Default: /bin/bash"></Input>
-      </Form-item>
-      <Form-item label="Tty" class="switch">
-        <i-switch v-model="newContainer.Tty" size="large">
-          <span slot="open">true</span>
-          <span slot="close">false</span>
-        </i-switch>
-      </Form-item>
-      <Form-item label="OpenStdin" class="switch">
-        <i-switch v-model="newContainer.OpenStdin" size="large">
-          <span slot="open">true</span>
-          <span slot="close">false</span>
-        </i-switch>
-      </Form-item>
-      <Form-item label="StdinOnce" class="switch">
-        <i-switch v-model="newContainer.StdinOnce" size="large">
-          <span slot="open">true</span>
-          <span slot="close">false</span>
-        </i-switch>
+        <Input v-model="defaultSettings.name" placeholder="New name of your container"></Input>
       </Form-item>
     </Form>
+    <Button class="import-button" type="primary" @click="openFileDialog">
+      Import from JSON
+    </Button>
+    <json-form class="advanced-settings-form" name="Advanced Settings" :label-width="80"
+        v-model="advancedSettings">
+    </json-form>
   </div>
 </template>
 
 <script>
-  // import docker from '../../js/docker'
+  // import JsonForm from 'vue-json-form'
+  import JsonForm from './JsonForm/JsonForm'
+
+  import docker from '../../js/docker'
+  import { ipcRenderer } from 'electron'
+  import fs from 'fs'
+  import path from 'path'
+  import notify from '../../js/notify'
 
   export default {
+    components: {
+      JsonForm
+    },
     data () {
       return {
-        newContainer: {
+        defaultSettings: {
           Image: '',
-          name: '',
-          Cmd: '/bin/bash',
-          Tty: false,
-          OpenStdin: false,
-          StdinOnce: false
-        }
+          name: ''
+        },
+        importedSettings: {},
+        advancedSettings: {},
+        errorred: false
       }
     },
     methods: {
       submit () {
-        console.log('submit: ', this.newContainer)
+        var self = this
+
+        function containerCreated (container) {
+          notify('New Container Created!')
+          self.$emit('new-container-created', container)
+        }
+
+        function creationErrored (err) {
+          notify(err)
+          self.$emit('no-container-created', err)
+        }
+
+        docker.createContainer(Object.assign(this.defaultSettings, this.advancedSettings))
+          .then(containerCreated)
+          .catch(creationErrored)
 
         this.reset()
       },
       reset () {
-        console.log('reset')
-        this.newContainer = {
+        this.defaultSettings = {
           Image: '',
-          name: '',
-          Cmd: '/bin/bash',
-          Tty: false,
-          OpenStdin: false,
-          StdinOnce: false
+          name: ''
         }
+        this.advancedSettings = this.importedSettings
+      },
+      openFileDialog () {
+        ipcRenderer.send('open-file-dialog')
       }
+    },
+    created () {
+      var self = this
+      this.stringifiedSettings = JSON.stringify(this.importedSettings, null, 4)
+      ipcRenderer.on('selected-directory', function (event, filepaths) {
+        // console.log(filepaths)
+        if (filepaths.length === 1) {
+          notify('You should select and ONLY SELECT ONE file!')
+          return
+        }
+
+        var filepath = filepaths[0]
+        try {
+          if (path.extname(filepath) === '.json') {
+            notify('Not a .json file!')
+            return
+          }
+
+          fs.readFile(filepath, (err, data) => {
+            if (err) {
+              notify(err)
+            }
+            var parsedJSON = JSON.parse(data)
+            self.importedSettings = parsedJSON
+            self.advancedSettings = self.importedSettings
+          })
+        } catch (e) {
+          notify(e)
+        }
+      })
     }
   }
 </script>
@@ -72,5 +109,11 @@
 <style scoped>
   .switch {
     display: inline-block;
+  }
+  .import-button {
+    display: inline-block;
+  }
+  .advanced-settings-form {
+    margin-top: 10px;
   }
 </style>

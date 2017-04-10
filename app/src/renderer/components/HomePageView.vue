@@ -14,16 +14,10 @@
           <Icon type="ios-people"></Icon>
           Plugins
         </Menu-item>
-        <Submenu name="home-menu-dockerhub">
-          <template slot="title">
-            <Icon type="stats-bars"></Icon>
-            Docker Hub
-          </template>
-          <Menu-item name="home-menu-dockerhub-topstars">Top Stars</Menu-item>
-          <Menu-item name="home-menu-dockerhub-toppulls">Top Pulls</Menu-item>
-          <Menu-item name="home-menu-dockerhub-login">Login</Menu-item>
-          <Menu-item name="home-menu-dockerhub-search">Search</Menu-item>
-        </Submenu>
+        <Menu-item name="home-menu-dockerhub">
+          <Icon type="stats-bars"></Icon>
+          <router-link to="/docker-hub">Docker Hub</router-link>
+        </Menu-item>
         <Submenu name="home-menu-settings">
           <template slot="title">
             <Icon type="settings"></Icon>
@@ -40,10 +34,12 @@
       <router-view></router-view>
     </div>
     <Modal v-model="showInfo" title="Info">
-      <pre>{{info}}</pre>
+      <tree-view :data="info" :options="{maxDepth: 1, rootObjectKey: 'Info'}">
+      </tree-view>
     </Modal>
     <Modal v-model="showVersion" title="Version">
-      <pre>{{version}}</pre>
+      <tree-view :data="version" :options="{maxDepth: 1, rootObjectKey: 'Version'}">
+      </tree-view>
     </Modal>
     <div class="layout-copy">
       2017-2018 &copy; Dockeron
@@ -54,18 +50,21 @@
 <script>
   import ContainersView from './HomePageView/ContainersView'
   import ImagesView from './HomePageView/ImagesView'
+  import TreeView from './HomePageView/TreeView/TreeView'
 
   import docker from '../js/docker'
+  import notify from '../js/notify'
 
   export default {
     name: 'home-page',
+    components: {
+      ContainersView,
+      ImagesView,
+      TreeView
+    },
     data () {
       return {
         activeMenu: 'home-menu-containers',
-        routeToMenu: {
-          '/containers': 'home-menu-containers',
-          '/images': 'home-menu-images'
-        },
         info: {},
         version: {},
         ping: '',
@@ -73,27 +72,21 @@
         showVersion: false
       }
     },
-    components: {
-      ContainersView,
-      ImagesView
-    },
     methods: {
       onMenuSelect (selectedMenuName) {
-        if (selectedMenuName === 'home-menu-settings-info') {
-          this.showInfo = true
-        } else if (selectedMenuName === 'home-menu-settings-version') {
-          this.showVersion = true
-        } else if (selectedMenuName === 'home-menu-settings-ping') {
-          /* eslint-disable no-new */
-          new Notification('Dockeron', {
-            body: 'The network is ' + this.ping + ' !'
-          })
-        } else {
-          console.log(selectedMenuName)
+        switch (selectedMenuName) {
+          case 'home-menu-settings-info':
+            this.showInfo = true
+            break
+          case 'home-menu-settings-version':
+            this.showVersion = true
+            break
+          case 'home-menu-settings-ping':
+            notify('The network is ' + this.ping + ' !')
+            break
+          default:
+            console.log(selectedMenuName)
         }
-      },
-      loadActiveMenu () {
-        this.activeMenu = this.routeToMenu[this.$route.fullPath] || 'home-menu-containers'
       },
       loadInfo () {
         var self = this
@@ -125,14 +118,15 @@
       this.loadInfo()
       this.loadVersion()
       this.loadPing()
-      this.loadActiveMenu()
+      // this.loadActiveMenu()
     }
   }
 </script>
 
 <style scoped>
   .layout {
-    background: #f5f7f9;
+    /*background: #f5f7f9;*/
+    height: 100%;
     position: relative;
   }
 
