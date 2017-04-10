@@ -37,6 +37,13 @@
       <Modal v-model="topProcessesModal" title="Top Processes">
         <container-top-processes-form ref="containerTopProcessesForm" v-bind:topResult="topResult"></container-top-processes-form>
       </Modal>
+      <Button class="container-control-button" type="success" @click="getContainerStats">
+        Stats
+      </Button>
+      <Modal v-model="containerStatsModal" title="Stats">
+        stats
+        <pre>{{containerStats}}</pre>
+      </Modal>
     </div>
   </div>
 </template>
@@ -52,9 +59,11 @@
     data () {
       return {
         topProcessesModal: false,
-        containerRenameModal: false,
         topResult: {},
-        containerNewName: ''
+        containerRenameModal: false,
+        containerNewName: '',
+        containerStatsModal: false,
+        containerStats: {}
       }
     },
     props: {
@@ -66,6 +75,22 @@
       hasAllButtons: false
     },
     methods: {
+      simpleStringify (object) {
+        var simpleObject = {}
+        for (var prop in object) {
+          if (!object.hasOwnProperty(prop)) {
+            continue
+          }
+          if (typeof (object[prop]) === 'object') {
+            continue
+          }
+          if (typeof (object[prop]) === 'function') {
+            continue
+          }
+          simpleObject[prop] = object[prop]
+        }
+        return simpleObject // returns cleaned up JSON
+      },
       startContainer () {
         var self = this
         console.log('Start: ', self.containerId)
@@ -165,7 +190,7 @@
           stdout: true,
           stderr: true,
           tail: 10
-        }
+        }        
         container.logs(logOpts)
           .then(function (data) {
             console.log('Display logs:')
@@ -219,6 +244,19 @@
             console.log(data)
             self.topResult = data
             self.topProcessesModal = true
+          })
+          .catch(console.warn)
+      },
+      getContainerStats () {
+        var self = this
+        console.log('Get stats of container: ' + self.containerId)
+        var container = docker.getContainer(self.containerId)
+
+        container.stats()
+          .then(function (data) {
+            self.containerStats = self.simpleStringify(data)
+            self.containerStatsModal = true
+            console.log(self.containerStats)
           })
           .catch(console.warn)
       }
