@@ -1,9 +1,7 @@
 <template>
   <div>
-    <Button type="primary" icon="refresh" :loading="loadingContainers"
-        @click="refreshContainers">
-      <span v-if="!loadingContainers">Refresh</span>
-      <span v-else>Loading...</span>
+    <Button type="primary" icon="refresh" @click="refreshContainers">
+      Refresh
     </Button>
     <Button type="primary" icon="plus-round" @click="containerCreateModal = true">
       Create
@@ -23,18 +21,21 @@
             {{container.State}}
           </Tag>
         </p>
-        <p>Image: {{container.Image}}</p>
+        <p>
+          Image: {{getImageName(container.Image)}}
+          <Tag v-if="getTag(container.Image)">{{getTag(container.Image)}}</Tag>
+        </p>
         <p>Status: {{container.Status}}</p>
         <Button type="primary" @click="inspectContainer(container.Id)">
           Inspect
         </Button>
-        <container-control-panel class="control-panel" :container-id="container.Id"
-            @container-data-refreshed="function (newData) { loadContainers() }">
+        <container-control-panel class="control-panel"
+            :container-id="container.Id" :container-name="container.Names[0]"
+            @input="function (newData) { loadContainers() }">
         </container-control-panel>
       </Card>
     </div>
     <div v-else>
-      <h4>No containers found.</h4>
       <pre>{{error}}</pre>
     </div>
   </div>
@@ -46,6 +47,8 @@
 
   import docker from '../../js/docker'
   import notify from '../../js/notify'
+  import notNull from '../../js/notNull'
+  import parseRepoTag from '../../js/parseRepoTag'
 
   export default {
     components: {
@@ -65,15 +68,13 @@
           exited: 'red',
           dead: 'red'
         },
-        loadingContainers: false,
         containerCreateModal: false
       }
     },
     watch: {
       containers: function (newContainers) {
         this.hasFoundContainers = (
-          typeof newContainers !== 'undefined' &&
-          newContainers !== null &&
+          notNull(newContainers) &&
           newContainers.length > 0
         )
       }
@@ -86,10 +87,16 @@
         this.$refs.containerCreationForm.reset()
       },
       refreshContainers () {
-        this.loadingContainers = true
         this.loadContainers()
-        notify('Container list refreshed!')
-        this.loadingContainers = false
+        if (notNull(this.error) && this.error !== {}) {
+          notify('Refreshed: ' + this.containers.length + ' containers found!')
+        }
+      },
+      getImageName (repoTag) {
+        return parseRepoTag(repoTag).repository
+      },
+      getTag (repoTag) {
+        return parseRepoTag(repoTag).tag
       },
       inspectContainer (containerId) {
         this.$router.push({
@@ -138,12 +145,12 @@
     height: 26px;
   }
 
-  .control-panel {
-    display: inline-block;
-  }
-
   .container-state-tag {
     position: absolute;
     right: 3px;
+  }
+
+  .control-panel {
+    display: inline-block;
   }
 </style>

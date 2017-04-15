@@ -1,6 +1,6 @@
 <template>
   <div>
-    <Form class="json-form" :label-width="labelWidth">
+    <Form :label-width="labelWidth">
       <json-node v-model="value" :prop="name"></json-node>
     </Form>
   </div>
@@ -22,7 +22,8 @@
         type: String,
         default: ''
       },
-      value: {}
+      // JSON data
+      value: [Object, Array]
     }
   }
 </script>

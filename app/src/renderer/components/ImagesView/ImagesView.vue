@@ -1,22 +1,26 @@
 <template>
   <div>
-    <Button class="refresh-button" type="primary" icon="refresh"
-        :loading="loadingImages" @click="refreshImages">
-      <span v-if="!loadingImages">Refresh</span>
-      <span v-else>Loading...</span>
+    <Button type="primary" icon="refresh" @click="refreshImages">
+      Refresh
     </Button>
-    <Button class="container-operation-button" type="primary" icon="plus-round"
-        @click="imagePullModal = true">
+    <Button type="primary" icon="plus-round" @click="imagePullModal = true">
       Pull
     </Button>
     <Modal v-model="imagePullModal" title="Pull Image" @on-ok="pullImage" @on-cancel="repoTag = ''">
-      Image Name (and Tag): <Input v-model="repoTag"></Input>
+      <Input v-model="repoTag" placeholder="Image Name (and Tag)"></Input>
     </Modal>
     <br>
     <div v-if="hasFoundImages">
       <Card v-for="image in images" class="image-card">
         <p slot="title" class="image-card-title">
-          {{getImageName(image.RepoTags[0])}}
+          <Tooltip placement="right">
+            {{getImageName(image.RepoTags[0])}}
+            <div slot="content" class="description-pop">
+              <p v-for="name in image.RepoTags">
+                {{name}}
+              </p>
+            </div>
+          </Tooltip>
         </p>
         <p>
           Tags: <Tag v-for="tag in getTags(image.RepoTags)">{{tag}}</Tag>
@@ -27,13 +31,12 @@
           Inspect
         </Button>
         <image-control-panel class="control-panel" :image-id="image.Id"
-            @image-data-refreshed="function (newData) { loadImages() }"
+            @input="function (newData) { loadImages() }"
             @image-removed="function (removed) { loadImages() }">
         </image-control-panel>
       </Card>
     </div>
     <div v-else>
-      <h4>No images found.</h4
       <pre>{{error}}</pre>
     </div>
   </div>
@@ -44,6 +47,8 @@
 
   import docker from '../../js/docker'
   import notify from '../../js/notify'
+  import notNull from '../../js/notNull'
+  import parseRepoTag from '../../js/parseRepoTag'
 
   export default {
     components: {
@@ -53,27 +58,22 @@
       return {
         images: [],
         hasFoundImages: false,
-        error: '',
-        loadingImages: false,
+        error: {},
         imagePullModal: false,
         repoTag: ''
       }
     },
     watch: {
       images: function (newImages) {
-        this.hasFoundImages = (
-          typeof newImages !== 'undefined' &&
-          newImages !== null &&
-          newImages.length > 0
-        )
+        this.hasFoundImages = notNull(newImages) && newImages.length > 0
       }
     },
     methods: {
       refreshImages () {
-        this.loadingImages = true
         this.loadImages()
-        notify('Image list refreshed!')
-        this.loadingImages = false
+        if (notNull(this.error) && this.error !== {}) {
+          notify('Refreshed: ' + this.images.length + ' images found!')
+        }
       },
       pullImage () {
         var self = this
@@ -115,11 +115,14 @@
           .catch(updateErrored)
       },
       getImageName (repoTag) {
-        return repoTag.slice(0, repoTag.indexOf(':'))
+        return parseRepoTag(repoTag).repository
+      },
+      getTag (repoTag) {
+        return parseRepoTag(repoTag).tag
       },
       getTags (repoTags) {
         return repoTags.map(function (repoTag) {
-          return repoTag.slice(repoTag.indexOf(':') + 1)
+          return parseRepoTag(repoTag).tag
         })
       },
       formatBytes (bytes) {
@@ -148,11 +151,21 @@
     margin: 5px 5px;
   }
 
+  .image-card-title {
+    height: 26px;
+  }
+
   .control-panel {
     display: inline-block;
   }
 
-  .image-card-title {
-    height: 26px;
+  .description-pop p {
+    display: block;
+    white-space: normal;
+    color: #ffffff;
+  }
+
+  .description-pop {
+    white-space: normal;
   }
 </style>

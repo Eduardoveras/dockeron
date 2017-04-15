@@ -1,21 +1,20 @@
 <template>
   <div>
     <container-control-panel class="container-control-panel" v-model="containerData"
-        :container-id="containerId" :initialize="true" :has-all-buttons="true"
-        @container-data-refreshed="refreshContainerData">
+        :container-id="containerId" :container-name="containerData.Name"
+        :initialize="true" :has-all-buttons="true">
     </container-control-panel>
     <Tag class="container-state-tag" :color="stateToColor[status]">
       {{status}}
     </Tag>
     <br>
-    <tree-view :data="containerData" :options="{maxDepth: 1, rootObjectKey: containerId}">
-    </tree-view>
+    <tree-view :data="containerData" :options="{rootObjectKey: containerId}"></tree-view>
   </div>
 </template>
 
 <script>
   import ContainerControlPanel from './ContainerControlPanel'
-  import TreeView from './TreeView/TreeView'
+  import TreeView from '../TreeView/TreeView'
 
   export default {
     components: {
@@ -48,17 +47,8 @@
       }
     },
     methods: {
-      goHome () {
-        this.$router.push({
-          name: 'containers-view',
-          params: { activeMenu: 'home-menu-containers' }
-        })
-      },
       loadContainerId () {
         this.containerId = this.$route.params.containerId
-      },
-      refreshContainerData (newData) {
-        this.containerData = newData
       }
     },
     created () {
@@ -69,7 +59,6 @@
 
 <style scoped>
   .container-control-panel {
-    /*display: inline-block;*/
     margin-left: 20px;
   }
 

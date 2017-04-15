@@ -18,13 +18,12 @@
 </template>
 
 <script>
-  // import JsonForm from 'vue-json-form'
-  import JsonForm from './JsonForm/JsonForm'
+  import JsonForm from '../JsonForm/JsonForm'
 
-  import docker from '../../js/docker'
-  import { ipcRenderer } from 'electron'
   import fs from 'fs'
   import path from 'path'
+  import { ipcRenderer } from 'electron'
+  import docker from '../../js/docker'
   import notify from '../../js/notify'
 
   export default {
@@ -38,8 +37,7 @@
           name: ''
         },
         importedSettings: {},
-        advancedSettings: {},
-        errorred: false
+        advancedSettings: {}
       }
     },
     methods: {
@@ -47,7 +45,8 @@
         var self = this
 
         function containerCreated (container) {
-          notify('New Container Created!')
+          notify('New container ID ' + container.Id +
+                 ' created from image ' + self.defaultSettings.Image + ' !')
           self.$emit('new-container-created', container)
         }
 

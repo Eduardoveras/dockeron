@@ -1,43 +1,49 @@
 <template>
   <div>
-    <Button class="container-control-button" type="success" @click="getImageHistory">
-      History
+    <Button type="success" @click="createContainer">
+      Create
     </Button>
-    <Modal v-model="imageHistoryModal" title="Image History">
-      <tree-view class="tree-view" :data="history" :options="{maxDepth: 2}">
-      </tree-view>
-    </Modal>
-    <Button class="container-control-button" type="error" @click="removeImageModal = true">
+    <Button type="error" @click="removeImageModal = true">
       Remove
     </Button>
     <Modal v-model="removeImageModal" title="Do you want to remove this image?"
         @on-ok="removeImage">
     </Modal>
-    <Modal v-model="removedImageModal" title="Remove results"
-        @on-ok="goBackHome">
-      <tree-view class="tree-view" :data="removed" :options="{maxDepth: 2}">
-      </tree-view>
+    <Modal v-model="removedImageModal" title="Remove results">
+      <tree-view :data="removed"></tree-view>
     </Modal>
     <div v-if="hasAllButtons" class="additional-buttons">
-      <Button class="container-control-button" type="warning" @click="pushImage">
+      <Button type="success" @click="getImageHistory">
+        History
+      </Button>
+      <Modal v-model="imageHistoryModal" title="Image History">
+        <tree-view :data="history"></tree-view>
+      </Modal>
+      <Button type="warning" @click="pushImage">
         Push
       </Button>
-      <Button class="container-control-button" type="info" @click="tagImageModal = true">
-        Tag
+      <Button type="info" @click="tagImageModal = true">
+        Tag/Rename
       </Button>
       <Modal v-model="tagImageModal" title="Tag Image" @on-ok="tagImage">
-        Repo: <Input v-model="newTags.repo" placeholder="The repository to tag in."></Input>
-        Tag: <Input v-model="newTags.tag" placeholder="The name of the new tag."></Input>
+        <Form :model="newTags" label-position="right" :label-width="70">
+          <Form-item prop="repo" label="Repository">
+            <Input v-model="newTags.repo" placeholder="The repository to tag in."></Input>
+          </Form-item>
+          <Form-item prop="tag" label="Tag">
+            <Input v-model="newTags.tag" placeholder="The name of the new tag."></Input>
+          </Form-item>
+        </Form>
       </Modal>
-      <!-- <Button class="container-control-button" type="success" @click="getImage">
+      <Button type="success" @click="getImage">
         Get
-      </Button> -->
+      </Button>
     </div>
   </div>
 </template>
 
 <script>
-  import TreeView from './TreeView/TreeView'
+  import TreeView from '../TreeView/TreeView'
 
   import docker from '../../js/docker'
   import notify from '../../js/notify'
@@ -45,6 +51,27 @@
   export default {
     components: {
       TreeView
+    },
+    props: {
+      imageId: {
+        type: String,
+        default: ''
+      },
+      initialize: {
+        type: Boolean,
+        default: false
+      },
+      hasAllButtons: {
+        type: Boolean,
+        default: false
+      },
+      // image data
+      value: {
+        type: Object,
+        default () {
+          return {}
+        }
+      }
     },
     data () {
       return {
@@ -61,13 +88,11 @@
         image: {}
       }
     },
-    props: {
-      imageId: '',
-      initialize: false,
-      hasAllButtons: false,
-      value: {}
-    },
     methods: {
+      createContainer () {
+        // TODO (fluency03): create a container directly from image
+        // with specifying name and tag
+      },
       removeImage () {
         var self = this
 
@@ -82,9 +107,6 @@
           .then(imageRemoved)
           .catch(notify)
       },
-      goBackHome () {
-        //
-      },
       getImageHistory () {
         var self = this
 
@@ -98,7 +120,7 @@
           .catch(notify)
       },
       pushImage () {
-        // TODO
+        // TODO (fluency03)
       },
       tagImage () {
         var self = this
@@ -112,18 +134,18 @@
           .catch(notify)
       },
       getImage () {
-        // TODO
+        // TODO (fluency03)
       },
       inspectImage () {
         var self = this
 
         function imageRefreshed (data) {
-          self.$emit('image-data-refreshed', data)
+          self.$emit('input', data)
         }
 
         function refreshErrored (err) {
+          self.$emit('input', err)
           notify(err)
-          self.$emit('image-data-errored', err)
         }
 
         this.image.inspect()

@@ -11,7 +11,7 @@
     <Poptip placement="bottom-end">
       <Button class="login-button" icon="person">Login</Button>
       <div slot="content">
-        <Form class="login-form" :model="credentials">
+        <Form :model="credentials">
           <Form-item prop="username">
             <Input type="text" v-model="credentials.username" placeholder="Username">
               <Icon type="ios-person-outline" slot="prepend"></Icon>
@@ -37,6 +37,13 @@
   import notify from '../../js/notify'
 
   export default {
+    props: {
+      // access token
+      value: {
+        type: String,
+        default: ''
+      }
+    },
     data () {
       return {
         credentials: {
@@ -44,9 +51,6 @@
           password: ''
         }
       }
-    },
-    props: {
-      value: ''
     },
     methods: {
       login () {
