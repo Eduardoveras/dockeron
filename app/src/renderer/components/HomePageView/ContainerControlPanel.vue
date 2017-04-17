@@ -1,209 +1,158 @@
 <template>
   <div>
-    <Button type="success" @click="startContainer">
+    <Button class="container-control-button" type="success" @click="startContainer">
       Start
     </Button>
-    <Button type="error" @click="stopContainer">
+    <Button class="container-control-button" type="error" @click="stopContainer">
       Stop
     </Button>
     <div v-if="hasAllButtons" class="additional-buttons">
-      <Button type="warning" @click="pauseContainer">
+      <Button class="container-control-button" type="warning" @click="pauseContainer">
         Pause
       </Button>
-      <Button type="info" @click="unpauseContainer">
+      <Button class="container-control-button" type="info" @click="unpauseContainer">
         Unpause
       </Button>
-      <Button type="warning" @click="restartContainer">
+      <Button class="container-control-button" type="warning" @click="restartContainer">
         Restart
       </Button>
-      <Button type="error" @click="killContainer">
+      <Button class="container-control-button" type="error" @click="killContainer">
         Kill
       </Button>
-      <Button type="success" @click="inspectContainer">
+      <Button class="container-control-button" type="success" @click="inspectContainer">
         Refresh
       </Button>
-      <Button type="info" @click="getContainerLogs">
+      <Button class="container-control-button" type="info" @click="getContainerLogs">
         Logs
       </Button>
       <Modal v-model="logsModal" title="Logs">
-        <pre class="contents">{{logs}}</pre>
+        <pre class="logs">{{logs}}</pre>
       </Modal>
-      <Button type="warning" @click="containerRenameModal = true">
+      <Button class="container-control-button" type="warning" @click="containerRenameModal = true">
         Rename
       </Button>
       <Modal v-model="containerRenameModal" title="Rename Container" @on-ok="renameContainer">
         <Input v-model="containerNewName" placeholder="New Name"></Input>
       </Modal>
-      <Button type="success" @click="listTopProcesses">
+      <Button class="container-control-button" type="success" @click="listTopProcesses">
         Top
       </Button>
       <Modal v-model="topProcessesModal" title="Top Processes">
-        <tree-view :data="topResult"></tree-view>
-      </Modal>
-      <Button class="container-control-button" type="success" @click="getContainerStats">
-        Stats
-      </Button>
-      <Modal v-model="containerStatsModal" title="Stats">
-        <pre class="contents">read: {{containerStats.read}}</pre>
-        <pre class="contents">preread: {{containerStats.preread}}</pre>
+        <tree-view :data="topResult" :options="{maxDepth: 1, rootObjectKey: 'Top'}"></tree-view>
       </Modal>
     </div>
   </div>
 </template>
 
 <script>
-  import TreeView from '../TreeView/TreeView'
+  import TreeView from './TreeView/TreeView'
 
   import docker from '../../js/docker'
   import notify from '../../js/notify'
-
-  function errorAndRefresh (err) {
-    notify(err)
-    // bind function to this during usage
-    this.inspectContainer()
-  }
 
   export default {
     components: {
       TreeView
     },
-    props: {
-      containerId: {
-        type: String,
-        default: ''
-      },
-      containerName: {
-        type: String,
-        default: ''
-      },
-      initialize: {
-        type: Boolean,
-        default: false
-      },
-      hasAllButtons: {
-        type: Boolean,
-        default: false
-      },
-      // container data
-      value: {
-        type: Object,
-        default () {
-          return {}
-        }
-      }
-    },
     data () {
       return {
-        container: {},
         topProcessesModal: false,
-        topResult: {},
         containerRenameModal: false,
-        containerNewName: '',
         logsModal: false,
         logs: '',
-        containerStatsModal: false,
-        containerStats: {}
+        topResult: {},
+        containerNewName: '',
+        container: {}
       }
     },
+    props: {
+      containerId: '',
+      initialize: false,
+      hasAllButtons: false,
+      value: {}
+    },
     methods: {
-      simpleStringify (object) {
-        var simpleObject = {}
-        for (var prop in object) {
-          if (!object.hasOwnProperty(prop)) {
-            continue
-          }
-          if (typeof (object[prop]) === 'object') {
-            continue
-          }
-          if (typeof (object[prop]) === 'function') {
-            continue
-          }
-          simpleObject[prop] = object[prop]
-        }
-        return simpleObject // returns cleaned up JSON
-      },
       startContainer () {
         var self = this
 
         function containerStarted (data) {
-          notify('Container ' + self.containerName + ' started!')
+          notify('Container ' + self.value.Name + ' started!')
           self.inspectContainer()
         }
 
         this.container.start()
           .then(containerStarted)
-          .catch(errorAndRefresh.bind(this))
+          .catch(notify)
       },
       stopContainer () {
         var self = this
 
         function containerStopped (data) {
-          notify('Container ' + self.containerName + ' stopped!')
+          notify('Container ' + self.value.Name + ' stopped!')
           self.inspectContainer()
         }
 
         this.container.stop()
           .then(containerStopped)
-          .catch(errorAndRefresh.bind(this))
+          .catch(notify)
       },
       pauseContainer () {
         var self = this
 
         function containerPaused (data) {
-          notify('Container ' + self.containerName + ' paused!')
+          notify('Container ' + self.value.Name + ' paused!')
           self.inspectContainer()
         }
 
         this.container.pause()
           .then(containerPaused)
-          .catch(errorAndRefresh.bind(this))
+          .catch(notify)
       },
       unpauseContainer () {
         var self = this
 
         function containerUnpaused (data) {
-          notify('Container ' + self.containerName + ' unpaused!')
+          notify('Container ' + self.value.Name + ' unpaused!')
           self.inspectContainer()
         }
 
         this.container.unpause()
           .then(containerUnpaused)
-          .catch(errorAndRefresh.bind(this))
+          .catch(notify)
       },
       restartContainer () {
         var self = this
 
         function containerRestarted (data) {
-          notify('Container ' + self.containerName + ' restarted!')
+          notify('Container ' + self.value.Name + ' restarted!')
           self.inspectContainer()
         }
 
         this.container.restart()
           .then(containerRestarted)
-          .catch(errorAndRefresh.bind(this))
+          .catch(notify)
       },
       killContainer () {
         var self = this
 
         function containerKilled (data) {
-          notify('Container ' + self.containerName + ' killed!')
+          notify('Container ' + self.value.Name + ' killed!')
           self.inspectContainer()
         }
 
         this.container.kill()
           .then(containerKilled)
-          .catch(errorAndRefresh.bind(this))
+          .catch(notify)
       },
       inspectContainer () {
         var self = this
 
         function containerRefreshed (data) {
-          self.$emit('input', data)
+          self.$emit('container-data-refreshed', data)
         }
 
         function refreshErrored (err) {
-          self.$emit('input', err)
-          notify(err)
+          self.$emit('container-data-errored', err)
         }
 
         this.container.inspect()
@@ -211,22 +160,19 @@
           .catch(refreshErrored)
       },
       getContainerLogs () {
-        // TODO (fluency03) : more options to get the logs
         var self = this
         var logOpts = {
           stdout: true,
           stderr: true,
-          tail: 20
+          tail: 10
         }
 
         function containerLogsGot (data) {
           data.setEncoding('utf8')
-          self.logsModal = true
 
           data.on('data', function (logs) {
+            self.logsModal = true
             self.logs = logs
-            console.log('type of logs')
-            console.log(typeof (logs))
           })
         }
 
@@ -235,10 +181,7 @@
           .catch(notify)
       },
       renameContainer () {
-        if (this.containerNewName === '') {
-          notify('Container name cannot be empty!')
-          return
-        }
+        if (this.containerNewName === '') return
         var self = this
         var renameParams = {
           name: self.containerNewName
@@ -252,7 +195,7 @@
 
         this.container.rename(renameParams)
           .then(containerRenamed)
-          .catch(errorAndRefresh.bind(this))
+          .catch(notify)
       },
       listTopProcesses () {
         var self = this
@@ -264,23 +207,6 @@
 
         this.container.top()
           .then(topProcessesGot)
-          .catch(notify)
-      },
-      getContainerStats () {
-        var self = this
-
-        function containerStatsGot (data) {
-          data.setEncoding('utf8')
-          self.containerStatsModal = true
-          data.on('data', function (stats) {
-            console.log('stats: ')
-            console.log((stats))
-            self.containerStats = JSON.parse(stats)
-          })
-        }
-
-        this.container.stats()
-          .then(containerStatsGot)
           .catch(notify)
       }
     },
@@ -298,7 +224,7 @@
     display: inline-block;
   }
 
-  .contents {
-    white-space: normal;
+  .logs {
+    white-space: pre-wrap;
   }
 </style>
