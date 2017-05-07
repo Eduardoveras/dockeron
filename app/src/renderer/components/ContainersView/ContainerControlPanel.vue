@@ -47,6 +47,14 @@
         <pre class="contents">read: {{containerStats.read}}</pre>
         <pre class="contents">preread: {{containerStats.preread}}</pre>
       </Modal>
+      <Button class="container-control-button" type="info" @click="getChanges">
+        Changes
+      </Button>
+      <Modal v-model="containerChangesModal" title="Changes">
+        <li v-for="change in containerChanges">
+          {{ change.Path }} - {{ numberToKind[change.Kind] }}
+        </li>
+      </Modal>
     </div>
   </div>
 </template>
@@ -102,7 +110,14 @@
         logsModal: false,
         logs: '',
         containerStatsModal: false,
-        containerStats: {}
+        containerStats: {},
+        containerChangesModal: false,
+        containerChanges: {},
+        numberToKind: {
+          0: 'Modified',
+          1: 'Added',
+          2: 'Deleted'
+        }
       }
     },
     methods: {
@@ -281,6 +296,20 @@
 
         this.container.stats()
           .then(containerStatsGot)
+          .catch(notify)
+      },
+      getChanges () {
+        var self = this
+
+        function containerChangesGot (data) {
+          console.log('container changes:')
+          console.log(data)
+          self.containerChangesModal = true
+          self.containerChanges = data
+        }
+
+        this.container.changes()
+          .then(containerChangesGot)
           .catch(notify)
       }
     },
