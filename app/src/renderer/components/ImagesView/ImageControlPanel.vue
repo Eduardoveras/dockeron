@@ -1,30 +1,44 @@
 <template>
   <div>
-    <Button type="success" @click="createContainer">
-      Create
-    </Button>
-    <Button type="error" @click="removeImageModal = true">
-      Remove
-    </Button>
+    <Button type="success" @click="selectTag">Create</Button>
+    <Modal v-model="imageSelectionModal" title="Select Image Name and Tag"
+        @on-ok="containerCreateModal = true">
+      <Select v-model="selectedImage" style="width:400px">
+        <Option v-for="repoTag in imageRepoTags" :value="repoTag" :key="repoTag">
+          {{ repoTag }}
+        </Option>
+      </Select>
+    </Modal>
+    <Modal v-model="containerCreateModal" title="Create Container"
+        @on-ok="confirmCreation" @on-cancel="resetCreation">
+      <container-creation-form ref="containerCreationForm" v-model="selectedImage">
+      </container-creation-form>
+    </Modal>
+    <Button type="error" @click="removeImageModal = true">Remove</Button>
     <Modal v-model="removeImageModal" title="Do you want to remove this image?"
         @on-ok="removeImage">
+      Force remove:
+      <i-switch v-model="rmiParams.force" size="large">
+        <span slot="open">True</span>
+        <span slot="close">False</span>
+      </i-switch>
+      <br>
+      Do not delete untagged parent images:
+      <i-switch v-model="rmiParams.noprune" size="large">
+        <span slot="open">True</span>
+        <span slot="close">False</span>
+      </i-switch>
     </Modal>
     <Modal v-model="removedImageModal" title="Remove results">
       <tree-view :data="removed"></tree-view>
     </Modal>
     <div v-if="hasAllButtons" class="additional-buttons">
-      <Button type="success" @click="getImageHistory">
-        History
-      </Button>
+      <Button type="success" @click="getImageHistory">History</Button>
       <Modal v-model="imageHistoryModal" title="Image History">
         <tree-view :data="history"></tree-view>
       </Modal>
-      <Button type="warning" @click="pushImage">
-        Push
-      </Button>
-      <Button type="info" @click="tagImageModal = true">
-        Tag/Rename
-      </Button>
+      <Button type="warning" @click="pushImage">Push</Button>
+      <Button type="info" @click="tagImageModal = true">Tag/Rename</Button>
       <Modal v-model="tagImageModal" title="Tag Image" @on-ok="tagImage">
         <Form :model="newTags" label-position="right" :label-width="70">
           <Form-item prop="repo" label="Repository">
@@ -35,14 +49,13 @@
           </Form-item>
         </Form>
       </Modal>
-      <Button type="success" @click="getImage">
-        Get
-      </Button>
+      <Button type="success" @click="getImage">Get</Button>
     </div>
   </div>
 </template>
 
 <script>
+  import ContainerCreationForm from '../ContainersView/ContainerCreationForm'
   import TreeView from '../TreeView/TreeView'
 
   import docker from '../../js/docker'
@@ -50,6 +63,7 @@
 
   export default {
     components: {
+      ContainerCreationForm,
       TreeView
     },
     props: {
@@ -75,6 +89,8 @@
     },
     data () {
       return {
+        imageSelectionModal: false,
+        containerCreateModal: false,
         removeImageModal: false,
         removedImageModal: false,
         imageHistoryModal: false,
@@ -85,13 +101,34 @@
           repo: '',
           tag: ''
         },
-        image: {}
+        image: {},
+        selectedImage: '',
+        imageRepoTags: [],
+        rmiParams: {
+          force: false,
+          noprune: false
+        }
+      }
+    },
+    watch: {
+      imageRepoTags: function (newRepoTags) {
+        try {
+          this.selectedImage = newRepoTags[0]
+        } catch (e) {
+          console.log(e)
+        }
       }
     },
     methods: {
-      createContainer () {
-        // TODO (fluency03): create a container directly from image
-        // with specifying name and tag
+      selectTag () {
+        this.inspectImage()
+        this.imageSelectionModal = true
+      },
+      confirmCreation () {
+        this.$refs.containerCreationForm.submit()
+      },
+      resetCreation () {
+        this.$refs.containerCreationForm.reset()
       },
       removeImage () {
         var self = this
@@ -103,7 +140,7 @@
           self.$emit('image-removed', removed)
         }
 
-        this.image.remove()
+        this.image.remove(this.rmiParams)
           .then(imageRemoved)
           .catch(notify)
       },
@@ -140,10 +177,12 @@
         var self = this
 
         function imageRefreshed (data) {
+          self.imageRepoTags = data.RepoTags
           self.$emit('input', data)
         }
 
         function refreshErrored (err) {
+          self.imageRepoTags = []
           self.$emit('input', err)
           notify(err)
         }

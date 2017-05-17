@@ -1,11 +1,7 @@
 <template>
   <div>
-    <Button type="primary" icon="refresh" @click="refreshImages">
-      Refresh
-    </Button>
-    <Button type="primary" icon="plus-round" @click="imagePullModal = true">
-      Pull
-    </Button>
+    <Button type="primary" icon="refresh" @click="refreshImages">Refresh</Button>
+    <Button type="primary" icon="plus-round" @click="imagePullModal = true">Pull</Button>
     <Modal v-model="imagePullModal" title="Pull Image" @on-ok="pullImage" @on-cancel="repoTag = ''">
       <Input v-model="repoTag" placeholder="Image Name (and Tag)"></Input>
     </Modal>
@@ -16,9 +12,7 @@
           <Tooltip placement="right">
             {{getImageName(image.RepoTags[0])}}
             <div slot="content" class="description-pop">
-              <p v-for="name in image.RepoTags">
-                {{name}}
-              </p>
+              <p v-for="name in image.RepoTags">{{name}}</p>
             </div>
           </Tooltip>
         </p>
@@ -27,9 +21,7 @@
         </p>
         <p>Size: {{formatBytes(image.Size)}}</p>
         <p>Created: {{getDateTime(image.Created)}}</p>
-        <Button type="primary" @click="inspectImage(image.Id)">
-          Inspect
-        </Button>
+        <Button type="primary" @click="inspectImage(image.Id)">Inspect</Button>
         <image-control-panel class="control-panel" :image-id="image.Id"
             @input="function (newData) { loadImages() }"
             @image-removed="function (removed) { loadImages() }">
@@ -39,20 +31,24 @@
     <div v-else>
       <pre>{{error}}</pre>
     </div>
+    <foot-logs-view v-model="footLogs"></foot-logs-view>
   </div>
 </template>
 
 <script>
   import ImageControlPanel from './ImageControlPanel'
+  import FootLogsView from '../FootLogsView'
 
   import docker from '../../js/docker'
   import notify from '../../js/notify'
   import notNull from '../../js/notNull'
   import parseRepoTag from '../../js/parseRepoTag'
+  import formatBytes from '../../js/formatBytes'
 
   export default {
     components: {
-      ImageControlPanel
+      ImageControlPanel,
+      FootLogsView
     },
     data () {
       return {
@@ -60,7 +56,8 @@
         hasFoundImages: false,
         error: {},
         imagePullModal: false,
-        repoTag: ''
+        repoTag: '',
+        footLogs: {}
       }
     },
     watch: {
@@ -77,9 +74,24 @@
       },
       pullImage () {
         var self = this
-        function imagePulled (info) {
-          notify('New image is pulled!')
-          self.refreshImages()
+
+        this.$set(self.footLogs, 'pullLog', '')
+
+        function imagePulled (stream) {
+          function onFinished (err, output) {
+            self.$delete(self.footLogs, 'pullLog')
+            if (err) {
+              notify(err)
+              return
+            }
+            notify('New image is pulled!')
+          }
+
+          function onProgress (event) {
+            self.$set(self.footLogs, 'pullLog', JSON.stringify(event))
+          }
+
+          docker.modem.followProgress(stream, onFinished, onProgress)
         }
 
         docker.pull(this.repoTag)
@@ -125,18 +137,10 @@
           return parseRepoTag(repoTag).tag
         })
       },
-      formatBytes (bytes) {
-        if (bytes === 0) return '0 Bytes'
-
-        const k = 1000
-        const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB']
-        var i = Math.floor(Math.log(bytes) / Math.log(k))
-
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
-      },
       getDateTime (seconds) {
         return new Date(seconds * 1000).toLocaleString()
-      }
+      },
+      formatBytes: formatBytes
     },
     created () {
       this.loadImages()

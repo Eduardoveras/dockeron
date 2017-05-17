@@ -1,42 +1,45 @@
 <template>
   <div>
-    <Button type="success" @click="startContainer">
-      Start
-    </Button>
-    <Button type="error" @click="stopContainer">
-      Stop
-    </Button>
+    <Button type="success" @click="startContainer">Start</Button>
+    <Button type="error" @click="stopContainer">Stop</Button>
     <div v-if="hasAllButtons" class="additional-buttons">
-      <Button type="warning" @click="pauseContainer">
-        Pause
-      </Button>
-      <Button type="info" @click="unpauseContainer">
-        Unpause
-      </Button>
-      <Button type="warning" @click="restartContainer">
-        Restart
-      </Button>
-      <Button type="error" @click="killContainer">
-        Kill
-      </Button>
-      <Button type="success" @click="inspectContainer">
-        Refresh
-      </Button>
-      <Button type="info" @click="getContainerLogs">
-        Logs
-      </Button>
-      <Modal v-model="logsModal" title="Logs">
-        <pre class="contents">{{logs}}</pre>
-      </Modal>
-      <Button type="warning" @click="containerRenameModal = true">
-        Rename
-      </Button>
+      <Button type="warning" @click="pauseContainer">Pause</Button>
+      <Button type="info" @click="unpauseContainer">Unpause</Button>
+      <Button type="warning" @click="restartContainer">Restart</Button>
+      <Button type="error" @click="killContainer">Kill</Button>
+      <Button type="success" @click="inspectContainer">Refresh</Button>
+      <Button type="info" @click="getContainerLogs">Logs</Button>
+      <Button type="warning" @click="containerRenameModal = true">Rename</Button>
       <Modal v-model="containerRenameModal" title="Rename Container" @on-ok="renameContainer">
         <Input v-model="containerNewName" placeholder="New Name"></Input>
       </Modal>
-      <Button type="success" @click="listTopProcesses">
-        Top
-      </Button>
+      <Button type="error" @click="removeContainerModal = true">Remove</Button>
+      <Modal v-model="removeContainerModal" title="Do you want to remove this cintainer?"
+          @on-ok="removeContainer">
+        Remove the volumes associated with the container:
+        <i-switch v-model="rmcParams.v" size="large">
+          <span slot="open">True</span>
+          <span slot="close">False</span>
+        </i-switch>
+        <br>
+        Force remove:
+        <i-switch v-model="rmcParams.force" size="large">
+          <span slot="open">True</span>
+          <span slot="close">False</span>
+        </i-switch>
+        <br>
+        Remove the specified link associated with the container:
+        <i-switch v-model="rmcParams.link" size="large">
+          <span slot="open">True</span>
+          <span slot="close">False</span>
+        </i-switch>
+      </Modal>
+      <Button type="success" @click="psArgsModal = true">Top</Button>
+      <Modal v-model="psArgsModal" title="ps arguments" @on-ok="listTopProcesses">
+        <Input class="args-input" v-model="psArgs" placeholder="-ef">
+          <span slot="prepend">ps</span>
+        </Input>
+      </Modal>
       <Modal v-model="topProcessesModal" title="Top Processes">
         <tree-view :data="topResult"></tree-view>
       </Modal>
@@ -44,8 +47,8 @@
         Stats
       </Button>
       <Modal v-model="containerStatsModal" title="Stats">
-        <pre class="contents">read: {{containerStats.read}}</pre>
-        <pre class="contents">preread: {{containerStats.preread}}</pre>
+        <pre>read: {{containerStats.read}}</pre>
+        <pre>preread: {{containerStats.preread}}</pre>
       </Modal>
       <Button class="container-control-button" type="info" @click="getChanges">
         Changes
@@ -56,11 +59,13 @@
         </li>
       </Modal>
     </div>
+    <foot-logs-view v-model="footLogs"></foot-logs-view>
   </div>
 </template>
 
 <script>
   import TreeView from '../TreeView/TreeView'
+  import FootLogsView from '../FootLogsView'
 
   import docker from '../../js/docker'
   import notify from '../../js/notify'
@@ -73,7 +78,8 @@
 
   export default {
     components: {
-      TreeView
+      TreeView,
+      FootLogsView
     },
     props: {
       containerId: {
@@ -117,7 +123,21 @@
           0: 'Modified',
           1: 'Added',
           2: 'Deleted'
+        },
+        footLogs: {},
+        psArgsModal: false,
+        psArgs: '',
+        removeContainerModal: false,
+        rmcParams: {
+          v: false,
+          force: false,
+          link: false
         }
+      }
+    },
+    watch: {
+      containerId: function (newContainerId) {
+        this.container = docker.getContainer(newContainerId)
       }
     },
     methods: {
@@ -145,6 +165,7 @@
           self.inspectContainer()
         }
 
+        // TODO (fluency03): detachKeys - Override the key sequence for detaching a container
         this.container.start()
           .then(containerStarted)
           .catch(errorAndRefresh.bind(this))
@@ -157,6 +178,7 @@
           self.inspectContainer()
         }
 
+        // TODO (fluency03): Number of seconds to wait before killing the container
         this.container.stop()
           .then(containerStopped)
           .catch(errorAndRefresh.bind(this))
@@ -193,6 +215,7 @@
           self.inspectContainer()
         }
 
+        // TODO (fluency03): Number of seconds to wait before killing the container
         this.container.restart()
           .then(containerRestarted)
           .catch(errorAndRefresh.bind(this))
@@ -212,6 +235,10 @@
       inspectContainer () {
         var self = this
 
+        var queries = {
+          size: true
+        }
+
         function containerRefreshed (data) {
           self.$emit('input', data)
         }
@@ -221,7 +248,7 @@
           notify(err)
         }
 
-        this.container.inspect()
+        this.container.inspect(queries)
           .then(containerRefreshed)
           .catch(refreshErrored)
       },
@@ -234,14 +261,13 @@
           tail: 20
         }
 
+        this.$set(self.footLogs, 'runningLog', '')
+
         function containerLogsGot (data) {
           data.setEncoding('utf8')
-          self.logsModal = true
 
           data.on('data', function (logs) {
-            self.logs = logs
-            console.log('type of logs')
-            console.log(typeof (logs))
+            self.$set(self.footLogs, 'runningLog', self.footLogs.runningLog + logs)
           })
         }
 
@@ -269,15 +295,34 @@
           .then(containerRenamed)
           .catch(errorAndRefresh.bind(this))
       },
+      removeContainer () {
+        var self = this
+
+        function containerRemoved (data) {
+          notify('Container removed!')
+          self.$router.push({
+            name: 'containers-view'
+          })
+        }
+
+        this.container.remove(this.rmcParams)
+          .then(containerRemoved)
+          .catch(notify)
+      },
       listTopProcesses () {
         var self = this
+
+        var topParams = {
+          ps_args: this.psArgs
+        }
 
         function topProcessesGot (data) {
           self.topResult = data
           self.topProcessesModal = true
+          self.psArgs = '-ef'
         }
 
-        this.container.top()
+        this.container.top(topParams)
           .then(topProcessesGot)
           .catch(notify)
       },
@@ -288,9 +333,14 @@
           data.setEncoding('utf8')
           self.containerStatsModal = true
           data.on('data', function (stats) {
-            console.log('stats: ')
-            console.log((stats))
-            self.containerStats = JSON.parse(stats)
+            if (self.containerStatsModal) {
+              console.log('stats: ')
+              console.log((stats))
+              self.containerStats = JSON.parse(stats)
+            } else {
+              console.log('stats closed')
+              data.destroy()
+            }
           })
         }
 
@@ -326,8 +376,7 @@
   .additional-buttons {
     display: inline-block;
   }
-
-  .contents {
-    white-space: normal;
+  .args-input {
+    width: 30%;
   }
 </style>

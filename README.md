@@ -6,12 +6,15 @@
 [![Version npm](https://img.shields.io/npm/v/dockeron.svg)](https://www.npmjs.com/package/dockeron)
 [![Downloads npm](https://img.shields.io/npm/dt/dockeron.svg)](https://www.npmjs.com/package/dockeron)
 [![MIT license](https://img.shields.io/npm/l/dockeron.svg)](https://opensource.org/licenses/MIT)
+[![GitHub stars](https://img.shields.io/github/stars/dockeron/dockeron.svg?style=social&label=Star)](https://github.com/dockeron/dockeron)
 
 [![JavaScript Style Guide](https://cdn.rawgit.com/feross/standard/master/badge.svg)](https://github.com/feross/standard)
 
 *In development process.*
 
 A dockeron project, built on Electron + Vue.js for Docker.
+
+TODOs and progress, please see [project dockeron](https://github.com/dockeron/dockeron/projects/1).
 
 
 ![](./docs/dockeron-screenshot1.png)

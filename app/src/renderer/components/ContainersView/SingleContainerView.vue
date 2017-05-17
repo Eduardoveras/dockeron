@@ -4,9 +4,7 @@
         :container-id="containerId" :container-name="containerData.Name"
         :initialize="true" :has-all-buttons="true">
     </container-control-panel>
-    <Tag class="container-state-tag" :color="stateToColor[status]">
-      {{status}}
-    </Tag>
+    <Tag class="container-state-tag" :color="stateToColor[status]">{{status}}</Tag>
     <br>
     <tree-view :data="containerData" :options="{rootObjectKey: containerId}"></tree-view>
   </div>
@@ -15,6 +13,8 @@
 <script>
   import ContainerControlPanel from './ContainerControlPanel'
   import TreeView from '../TreeView/TreeView'
+
+  import containerStateToColor from '../../js/containerStateToColor'
 
   export default {
     components: {
@@ -25,14 +25,7 @@
       return {
         containerId: '',
         containerData: {},
-        stateToColor: {
-          created: 'blue',
-          restarting: 'yellow',
-          running: 'green',
-          paused: 'yellow',
-          exited: 'red',
-          dead: 'red'
-        },
+        stateToColor: containerStateToColor,
         status: 'exited'
       }
     },

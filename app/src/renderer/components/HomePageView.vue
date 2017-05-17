@@ -10,9 +10,13 @@
           <Icon type="beer"></Icon>
           <router-link to="/images">Images</router-link>
         </Menu-item>
-        <Menu-item name="home-menu-volumns">
+        <Menu-item name="home-menu-volumes">
           <Icon type="help-buoy"></Icon>
-          <router-link to="/volumns">Volumns</router-link>
+          <router-link to="/volumes">Volumes</router-link>
+        </Menu-item>
+        <Menu-item name="home-menu-networks">
+          <Icon type="help-buoy"></Icon>
+          <router-link to="/networks">Networks</router-link>
         </Menu-item>
         <Menu-item name="home-menu-plugins">
           <Icon type="gear-b"></Icon>
@@ -62,8 +66,6 @@
 </template>
 
 <script>
-  import ContainersView from './ContainersView/ContainersView'
-  import ImagesView from './ImagesView/ImagesView'
   import TreeView from './TreeView/TreeView'
 
   import docker from '../js/docker'
@@ -72,8 +74,6 @@
   export default {
     name: 'home-page',
     components: {
-      ContainersView,
-      ImagesView,
       TreeView
     },
     data () {
@@ -176,7 +176,7 @@
     color: inherit;
   }
 
-  @media (max-width: 637px) {
+  @media (max-width: 730px) {
     .ivu-menu {
       display: inline-table;
     }

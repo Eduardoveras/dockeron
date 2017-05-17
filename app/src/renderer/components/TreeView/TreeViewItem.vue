@@ -11,7 +11,8 @@
           {{data.children.length}} property
         </span>
         <span class="tree-view-item-hint" v-show="!isOpen() && data.children.length !== 1">
-          {{data.children.length}} properties</span>
+          {{data.children.length}} properties
+        </span>
       </div>
       <tree-view-item :key="getKey(data)" :max-depth="maxDepth" :current-depth="currentDepth+1"
           v-show="isOpen()" v-for="child in data.children" :data="child">
@@ -19,7 +20,7 @@
     </div>
     <div v-if="isArray(data)" class="tree-view-item-leaf">
       <div class="tree-view-item-node" @click.stop="toggleOpen()">
-        <span :class="{opened: isOpen()}"  class="tree-view-item-key tree-view-item-key-with-chevron">
+        <span :class="{opened: isOpen()}" class="tree-view-item-key tree-view-item-key-with-chevron">
           {{getKey(data)}}
         </span>
         <span class="tree-view-item-hint" v-show="!isOpen() && data.children.length === 1">
@@ -47,7 +48,8 @@
 
   export default {
     name: 'tree-view-item',
-    props: ['data', 'max-depth', 'current-depth'],
+    // TODO (fluency03): add filter for content search
+    props: ['data', 'max-depth', 'current-depth', 'filter'],
     data: function () {
       return {
         open: this.currentDepth < this.maxDepth
@@ -161,5 +163,9 @@
 
   .tree-view-item-hint {
     color: #ccc
+  }
+
+  .highlighted {
+    background-color: yellow;
   }
 </style>

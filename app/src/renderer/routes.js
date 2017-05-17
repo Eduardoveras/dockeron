@@ -30,9 +30,24 @@ export default [
         component: require('components/ImagesView/SingleImageView')
       },
       {
-        path: 'volumns',
-        name: 'volumns-view',
-        component: require('components/VolumnsView/VolumnsView')
+        path: 'volumes',
+        name: 'volumes-view',
+        component: require('components/VolumesView/VolumesView')
+      },
+      {
+        path: '/volumes/:volumeName',
+        name: 'single-volume-view',
+        component: require('components/VolumesView/SingleVolumeView')
+      },
+      {
+        path: 'networks',
+        name: 'networks-view',
+        component: require('components/NetworksView/NetworksView')
+      },
+      {
+        path: '/networks/:networkId',
+        name: 'single-network-view',
+        component: require('components/NetworksView/SingleNetworkView')
       },
       {
         path: 'plugins',

@@ -1,16 +1,24 @@
 <template>
   <div>
-    <Button type="primary" icon="refresh" @click="refreshContainers">
-      Refresh
-    </Button>
-    <Button type="primary" icon="plus-round" @click="containerCreateModal = true">
-      Create
-    </Button>
+    <Button type="primary" icon="refresh" @click="refreshContainers">Refresh</Button>
+    <Button type="primary" icon="plus-round" @click="containerCreateModal = true">Create</Button>
     <Modal v-model="containerCreateModal" title="Create Container"
         @on-ok="confirmCreation" @on-cancel="resetCreation">
       <container-creation-form ref="containerCreationForm"
-          @new-container-created="function (newContainer) { loadContainers() }">
+          @container-created="function (newContainer) { loadContainers() }">
       </container-creation-form>
+    </Modal>
+    <Button type="primary" icon="code" @click="containerRunModal = true">Run</Button>
+    <Modal v-model="containerRunModal" title="Run" @on-ok="confirmRun" @on-cancel="resetRun">
+      <container-run-form ref="containerRunForm"
+          @container-created="function (newContainer) { loadContainers() }"
+          @container-started="function (newContainer) { loadContainers() }">
+      </container-run-form>
+    </Modal>
+    <Button type="primary" icon="navicon-round" @click="listParamsModal = true">Filters</Button>
+    <Modal v-model="listParamsModal" title="Filters for listing containers">
+      <!-- TODO (fluency03): list containers filters -->
+      TODO
     </Modal>
     <br>
     <div v-if="hasFoundContainers">
@@ -25,10 +33,9 @@
           Image: {{getImageName(container.Image)}}
           <Tag v-if="getTag(container.Image)">{{getTag(container.Image)}}</Tag>
         </p>
+        <p>Size: rw {{formatBytes(container.SizeRw)}}, rootfs {{formatBytes(container.SizeRootFs)}}</p>
         <p>Status: {{container.Status}}</p>
-        <Button type="primary" @click="inspectContainer(container.Id)">
-          Inspect
-        </Button>
+        <Button type="primary" @click="inspectContainer(container.Id)">Inspect</Button>
         <container-control-panel class="control-panel"
             :container-id="container.Id" :container-name="container.Names[0]"
             @input="function (newData) { loadContainers() }">
@@ -44,31 +51,30 @@
 <script>
   import ContainerControlPanel from './ContainerControlPanel'
   import ContainerCreationForm from './ContainerCreationForm'
+  import ContainerRunForm from './ContainerRunForm'
 
   import docker from '../../js/docker'
   import notify from '../../js/notify'
   import notNull from '../../js/notNull'
   import parseRepoTag from '../../js/parseRepoTag'
+  import formatBytes from '../../js/formatBytes'
+  import containerStateToColor from '../../js/containerStateToColor'
 
   export default {
     components: {
       ContainerControlPanel,
-      ContainerCreationForm
+      ContainerCreationForm,
+      ContainerRunForm
     },
     data () {
       return {
         containers: [],
         hasFoundContainers: false,
         error: {},
-        stateToColor: {
-          created: 'blue',
-          restarting: 'yellow',
-          running: 'green',
-          paused: 'yellow',
-          exited: 'red',
-          dead: 'red'
-        },
-        containerCreateModal: false
+        stateToColor: containerStateToColor,
+        containerCreateModal: false,
+        containerRunModal: false,
+        listParamsModal: false
       }
     },
     watch: {
@@ -85,6 +91,12 @@
       },
       resetCreation () {
         this.$refs.containerCreationForm.reset()
+      },
+      confirmRun () {
+        this.$refs.containerRunForm.submit()
+      },
+      resetRun () {
+        this.$refs.containerRunForm.reset()
       },
       refreshContainers () {
         this.loadContainers()
@@ -126,7 +138,8 @@
         docker.listContainers(queries)
           .then(updateContainers)
           .catch(updateErrored)
-      }
+      },
+      formatBytes: formatBytes
     },
     created () {
       this.loadContainers()
