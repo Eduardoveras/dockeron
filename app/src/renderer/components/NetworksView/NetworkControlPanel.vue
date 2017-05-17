@@ -1,6 +1,10 @@
 <template>
   <div>
-    <!-- <Button type="error" @click="removeVolume">Remove</Button> -->
+    <Button type="success" @click="connectVolume">Connect</Button>
+    <Button type="warning" @click="disconnectVolume">Disconnect</Button>
+    <div v-if="hasAllButtons" class="additional-buttons">
+      <Button type="error" @click="removeVolume">Remove</Button>
+    </div>
   </div>
 </template>
 
@@ -18,6 +22,10 @@
         type: Boolean,
         default: false
       },
+      hasAllButtons: {
+        type: Boolean,
+        default: false
+      },
       // network data
       value: {
         type: Object,
@@ -31,19 +39,21 @@
         network: {}
       }
     },
+    watch: {
+      networkId: function (newNetworkId) {
+        this.network = docker.getNetwork(newNetworkId)
+      }
+    },
     methods: {
-      // removeVolume () {
-      //   // var self = this
-      //
-      //   function volumeRemoved (removed) {
-      //     console.log(removed)
-      //     notify('Volume has been removed!')
-      //   }
-      //
-      //   this.volume.remove()
-      //     .then(volumeRemoved)
-      //     .catch(notify)
-      // },
+      connectVolume () {
+        // TODO (fluency03)
+      },
+      removeVolume () {
+        // TODO (fluency03)
+      },
+      disconnectVolume () {
+        // TODO (fluency03)
+      },
       inspectNetwork () {
         var self = this
 
@@ -71,5 +81,7 @@
 </script>
 
 <style scoped>
-
+  .additional-buttons {
+    display: inline-block;
+  }
 </style>

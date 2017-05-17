@@ -58,6 +58,7 @@
           {{ change.Path }} - {{ numberToKind[change.Kind] }}
         </li>
       </Modal>
+      <Button type="info" @click="exportContainer">Export</Button>
     </div>
     <foot-logs-view v-model="footLogs"></foot-logs-view>
   </div>
@@ -67,6 +68,7 @@
   import TreeView from '../TreeView/TreeView'
   import FootLogsView from '../FootLogsView'
 
+  import fs from 'fs'
   import docker from '../../js/docker'
   import notify from '../../js/notify'
 
@@ -273,6 +275,26 @@
 
         this.container.logs(logOpts)
           .then(containerLogsGot)
+          .catch(notify)
+      },
+      exportContainer () {
+        var self = this
+
+        function containerExported (stream) {
+          var containerName = self.value.Name.replace('/', '')
+          var containerId = self.value.Id
+          var fileName = containerName + '_' + containerId + '.tar'
+          var writeStream = fs.createWriteStream(fileName)
+
+          stream.pipe(writeStream)
+
+          stream.on('end', function () {
+            notify('Container ' + containerName + 'exported to a tar file !')
+          })
+        }
+
+        this.container.export()
+          .then(containerExported)
           .catch(notify)
       },
       renameContainer () {

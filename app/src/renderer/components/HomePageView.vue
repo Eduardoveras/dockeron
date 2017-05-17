@@ -15,7 +15,7 @@
           <router-link to="/volumes">Volumes</router-link>
         </Menu-item>
         <Menu-item name="home-menu-networks">
-          <Icon type="help-buoy"></Icon>
+          <Icon type="link"></Icon>
           <router-link to="/networks">Networks</router-link>
         </Menu-item>
         <Menu-item name="home-menu-plugins">
@@ -176,7 +176,7 @@
     color: inherit;
   }
 
-  @media (max-width: 730px) {
+  @media (max-width: 850px) {
     .ivu-menu {
       display: inline-table;
     }
