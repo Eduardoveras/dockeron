@@ -59,6 +59,14 @@
         </li>
       </Modal>
       <Button type="info" @click="exportContainer">Export</Button>
+      <Button type="info" @click="containerExecModal = true">Exec</Button>
+      <Modal v-model="containerExecModal" title="Execution in Container"
+          @on-ok="confirmExec" @on-cancel="resetExec">
+        <container-exec-form ref="containerExecForm"
+          v-bind:container-id = "containerId"
+          @container-created="function () { execContainer() }">
+        </container-exec-form>
+      </Modal>
     </div>
     <foot-logs-view v-model="footLogs"></foot-logs-view>
   </div>
@@ -72,6 +80,8 @@
   import docker from '../../js/docker'
   import notify from '../../js/notify'
 
+  import containerExecForm from './containerExecForm'
+
   function errorAndRefresh (err) {
     notify(err)
     // bind function to this during usage
@@ -81,7 +91,8 @@
   export default {
     components: {
       TreeView,
-      FootLogsView
+      FootLogsView,
+      containerExecForm
     },
     props: {
       containerId: {
@@ -134,7 +145,8 @@
           v: false,
           force: false,
           link: false
-        }
+        },
+        containerExecModal: false
       }
     },
     watch: {
@@ -383,7 +395,17 @@
         this.container.changes()
           .then(containerChangesGot)
           .catch(notify)
+      },
+      confirmExec () {
+        this.$refs.containerExecForm.submit()
+      },
+      resetExec () {
+        this.$refs.containerExecForm.reset()
+      },
+      execContainer () {
+        console.log('container exec success')
       }
+
     },
     created () {
       this.container = docker.getContainer(this.containerId)
